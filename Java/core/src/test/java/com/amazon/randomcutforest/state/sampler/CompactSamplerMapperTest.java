@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.state.Mode;
 
 public class CompactSamplerMapperTest {
 
@@ -103,7 +104,7 @@ public class CompactSamplerMapperTest {
     @ParameterizedTest
     @MethodSource("samplerProvider")
     public void testRoundTripWithCopy(String description, CompactSampler sampler) {
-        mapper.setCopy(true);
+        mapper.setMode(Mode.COPY);
         CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
         assertValidMapping(sampler, mapped);
     }
@@ -111,7 +112,7 @@ public class CompactSamplerMapperTest {
     @ParameterizedTest
     @MethodSource("samplerProvider")
     public void testRoundTripWithoutCopy(String description, CompactSampler sampler) {
-        mapper.setCopy(false);
+        mapper.setMode(Mode.REFERENCE);
         CompactSampler mapped = mapper.toModel(mapper.toState(sampler));
         assertValidMapping(sampler, mapped);
     }
@@ -119,7 +120,7 @@ public class CompactSamplerMapperTest {
     @ParameterizedTest
     @MethodSource("nonemptySamplerProvider")
     public void testRoundTripInvalidHeap(String description, CompactSampler sampler) {
-        mapper.setCopy(true);
+        mapper.setMode(Mode.COPY);
         mapper.setValidateHeap(true);
         CompactSamplerState state = mapper.toState(sampler);
 

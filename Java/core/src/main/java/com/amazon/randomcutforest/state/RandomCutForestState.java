@@ -30,6 +30,12 @@ import com.amazon.randomcutforest.state.tree.CompactRandomCutTreeState;
 @Data
 public class RandomCutForestState {
 
+    public static final String CURRENT_VERSION = "2.0";
+
+    private String version;
+
+    private Mode mode;
+
     private long totalUpdates;
 
     private double lambda;

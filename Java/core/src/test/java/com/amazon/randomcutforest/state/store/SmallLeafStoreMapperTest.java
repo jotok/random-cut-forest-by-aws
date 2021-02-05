@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -27,47 +26,46 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.state.Mode;
-import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.SmallLeafStore;
 
-public class PointStoreDoubleMapperTest {
-    private int dimensions;
-    private int capacity;
-    private PointStoreDouble store;
+public class SmallLeafStoreMapperTest {
+    private SmallLeafStore store;
     private List<Integer> indexes;
-    private PointStoreDoubleMapper mapper;
+
+    private SmallLeafStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        dimensions = 2;
-        capacity = 4;
-        store = new PointStoreDouble(dimensions, capacity);
+
+        store = new SmallLeafStore((short) 10);
 
         indexes = new ArrayList<>();
-        double[] point1 = { 1.1, -22.2 };
-        indexes.add(store.add(point1));
-        double[] point2 = { 3.3, -4.4 };
-        indexes.add(store.add(point2));
-        double[] point3 = { 10.1, 100.1 };
-        indexes.add(store.add(point3));
+        indexes.add(store.addLeaf(1, 2, 1));
+        indexes.add(store.addLeaf(1, 3, 2));
+        indexes.add(store.addLeaf(4, 5, 1));
+        indexes.add(store.addLeaf(4, 6, 3));
 
-        mapper = new PointStoreDoubleMapper();
+        mapper = new SmallLeafStoreMapper();
     }
 
     @Test
     public void testRoundTripWithCopy() {
         mapper.setMode(Mode.COPY);
 
-        PointStoreDouble store2 = mapper.toModel(mapper.toState(store));
+        SmallLeafStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
-        assertEquals(store.getDimensions(), store2.getDimensions());
         assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
 
-        assertNotSame(store.getStore(), store2.getStore());
+        assertNotSame(store.pointIndex, store2.pointIndex);
+        assertNotSame(store.parentIndex, store2.parentIndex);
+        assertNotSame(store.mass, store2.mass);
         assertNotSame(store.getFreeIndexes(), store2.getFreeIndexes());
 
         indexes.forEach(i -> {
-            assertArrayEquals(store.get(i), store2.get(i));
+            assertEquals(store.getParent(i), store2.getParent(i));
+            assertEquals(store.getPointIndex(i), store2.getPointIndex(i));
+            assertEquals(store.getMass(i), store2.getMass(i));
         });
     }
 
@@ -75,12 +73,14 @@ public class PointStoreDoubleMapperTest {
     public void testRoundTripWithoutCopy() {
         mapper.setMode(Mode.REFERENCE);
 
-        PointStoreDouble store2 = mapper.toModel(mapper.toState(store));
+        SmallLeafStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
-        assertEquals(store.getDimensions(), store2.getDimensions());
         assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
 
-        assertSame(store.getStore(), store2.getStore());
+        assertSame(store.pointIndex, store2.pointIndex);
+        assertSame(store.parentIndex, store2.parentIndex);
+        assertSame(store.mass, store2.mass);
+        assertSame(store.getFreeIndexes(), store2.getFreeIndexes());
     }
 }

@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IContextualStateMapper;
+import com.amazon.randomcutforest.state.Mode;
 import com.amazon.randomcutforest.state.store.LeafStoreMapper;
 import com.amazon.randomcutforest.state.store.NodeStoreMapper;
 import com.amazon.randomcutforest.state.store.SmallLeafStoreMapper;
@@ -39,6 +40,14 @@ public class CompactRandomCutTreeFloatMapper implements
 
     private boolean boundingBoxCacheEnabled;
 
+    /**
+     * The mode used when mapping between model and state objects. The mapper
+     * guarantees that a state object created in a given mode can be converted to a
+     * model by a mapper class in the same mode. Currently supported modes are
+     * {@code COPY} and {@code REFERENCE}, and the default mode is {@code COPY}.
+     */
+    private Mode mode = Mode.COPY;
+
     @Override
     public CompactRandomCutTreeFloat toModel(CompactRandomCutTreeState state, CompactRandomCutTreeContext context,
             long seed) {
@@ -47,15 +56,19 @@ public class CompactRandomCutTreeFloatMapper implements
         ILeafStore leafStore;
         if (context.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
+            leafStoreMapper.setMode(mode);
             leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
+            nodeStoreMapper.setMode(mode);
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
         } else {
             LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+            leafStoreMapper.setMode(mode);
             leafStore = leafStoreMapper.toModel(state.getLeafStoreState());
 
             NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+            nodeStoreMapper.setMode(mode);
             nodeStore = nodeStoreMapper.toModel(state.getNodeStoreState());
         }
         return new CompactRandomCutTreeFloat(context.getMaxSize(), seed, (PointStoreFloat) context.getPointStore(),
@@ -69,15 +82,19 @@ public class CompactRandomCutTreeFloatMapper implements
 
         if (model.getMaxSize() < SmallNodeStore.MAX_TREE_SIZE) {
             SmallLeafStoreMapper leafStoreMapper = new SmallLeafStoreMapper();
+            leafStoreMapper.setMode(mode);
             state.setLeafStoreState(leafStoreMapper.toState((SmallLeafStore) model.getLeafStore()));
 
             SmallNodeStoreMapper nodeStoreMapper = new SmallNodeStoreMapper();
+            nodeStoreMapper.setMode(mode);
             state.setNodeStoreState(nodeStoreMapper.toState((SmallNodeStore) model.getNodeStore()));
         } else {
             LeafStoreMapper leafStoreMapper = new LeafStoreMapper();
+            leafStoreMapper.setMode(mode);
             state.setLeafStoreState(leafStoreMapper.toState((LeafStore) model.getLeafStore()));
 
             NodeStoreMapper nodeStoreMapper = new NodeStoreMapper();
+            nodeStoreMapper.setMode(mode);
             state.setNodeStoreState(nodeStoreMapper.toState((NodeStore) model.getNodeStore()));
         }
 

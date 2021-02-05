@@ -18,6 +18,7 @@ package com.amazon.randomcutforest.examples.dynamicconfiguration;
 import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
+import com.amazon.randomcutforest.state.Mode;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
 
@@ -88,7 +89,7 @@ public class DynamicSampling implements Example {
         first_anomalies = second_anomalies = 0;
         RandomCutForestMapper mapper = new RandomCutForestMapper();
         mapper.setSaveExecutorContext(true);
-        mapper.setCopy(true);
+        mapper.setMode(Mode.COPY);
         RandomCutForest copyForest = mapper.toModel(mapper.toState(forest));
         copyForest.setLambda(50 * forest.getLambda());
         // force an adjustment to catch up

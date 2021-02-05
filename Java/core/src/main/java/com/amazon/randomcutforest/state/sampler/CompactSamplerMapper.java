@@ -23,25 +23,21 @@ import lombok.Setter;
 
 import com.amazon.randomcutforest.sampler.CompactSampler;
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.Mode;
 
 @Getter
 @Setter
 public class CompactSamplerMapper implements IStateMapper<CompactSampler, CompactSamplerState> {
 
     /**
-     * This flag is passed to the constructor for {@code CompactSampler} when a new
-     * sampler is constructed in {@link #toModel}. If true, then the sampler will
-     * validate that the weight array in a {@code CompactSamplerState} instance
-     * satisfies the heap property. The heap property is not validated by default.
+     * The mode used when mapping between model and state objects. The mapper
+     * guarantees that a state object created in a given mode can be converted to a
+     * model by a mapper class in the same mode. Currently supported modes are
+     * {@code COPY} and {@code REFERENCE}, and the default mode is {@code COPY}.
      */
-    private boolean validateHeap = false;
+    private Mode mode = Mode.COPY;
 
-    /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
-     */
-    private boolean copy = true;
+    private boolean validateHeap = false;
 
     @Override
     public CompactSampler toModel(CompactSamplerState state, long seed) {
@@ -49,7 +45,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         int[] pointIndex;
         long[] sequenceIndex;
 
-        if (copy) {
+        if (mode == Mode.COPY) {
             weight = new float[state.getCapacity()];
             pointIndex = new int[state.getCapacity()];
 
@@ -82,7 +78,7 @@ public class CompactSamplerMapper implements IStateMapper<CompactSampler, Compac
         state.setSequenceIndexOfMostRecentLambdaUpdate(model.getSequenceIndexOfMostRecentLambdaUpdate());
         state.setMaxSequenceIndex(model.getMaxSequenceIndex());
 
-        if (copy) {
+        if (mode == Mode.COPY) {
             state.setWeight(Arrays.copyOf(model.getWeightArray(), model.size()));
             state.setPointIndex(Arrays.copyOf(model.getPointIndexArray(), model.size()));
             if (model.isStoreSequenceIndexesEnabled()) {

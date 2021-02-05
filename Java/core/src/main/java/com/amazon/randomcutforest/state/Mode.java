@@ -13,21 +13,8 @@
  * permissions and limitations under the License.
  */
 
-package com.amazon.randomcutforest.state.store;
+package com.amazon.randomcutforest.state;
 
-import lombok.Data;
-
-@Data
-public class LeafStoreState {
-    private int capacity;
-    private int freeIndexPointer;
-    private int[] pointIndex;
-
-    private int[] parentIndex;
-    private int[] mass;
-    private int[] freeIndexes;
-
-    private short[] smallParentIndex;
-    private short[] smallMass;
-    private short[] smallFreeIndexes;
+public enum Mode {
+    COPY, REFERENCE;
 }

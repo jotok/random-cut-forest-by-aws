@@ -27,6 +27,14 @@ import lombok.Data;
 @Data
 public class PointStoreState {
     /**
+     * The max size of the point store.
+     */
+    private int capacity;
+    /**
+     * The number of dimensions of a point in the store.
+     */
+    private int dimensions;
+    /**
      * Point data for a {@link com.amazon.randomcutforest.store.PointStoreDouble}.
      */
     private double[] doubleData;
@@ -42,4 +50,8 @@ public class PointStoreState {
      * An array of indexes indicating which data slots are occupied.
      */
     private int[] freeIndexes;
+    /**
+     * The index of the end of {@code freeIndexes}.
+     */
+    private int freeIndexPointer;
 }

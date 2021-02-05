@@ -15,7 +15,6 @@
 
 package com.amazon.randomcutforest.state.store;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -27,47 +26,49 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.amazon.randomcutforest.state.Mode;
-import com.amazon.randomcutforest.store.PointStoreDouble;
+import com.amazon.randomcutforest.store.SmallNodeStore;
 
-public class PointStoreDoubleMapperTest {
-    private int dimensions;
-    private int capacity;
-    private PointStoreDouble store;
+public class SmallNodeStoreMapperTest {
+    private SmallNodeStore store;
+    private SmallNodeStoreMapper mapper;
     private List<Integer> indexes;
-    private PointStoreDoubleMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        dimensions = 2;
-        capacity = 4;
-        store = new PointStoreDouble(dimensions, capacity);
-
         indexes = new ArrayList<>();
-        double[] point1 = { 1.1, -22.2 };
-        indexes.add(store.add(point1));
-        double[] point2 = { 3.3, -4.4 };
-        indexes.add(store.add(point2));
-        double[] point3 = { 10.1, 100.1 };
-        indexes.add(store.add(point3));
 
-        mapper = new PointStoreDoubleMapper();
+        store = new SmallNodeStore((short) 10);
+        indexes.add(store.addNode(1, 2, 3, 1, 6.6, 1));
+        indexes.add(store.addNode(1, 4, 5, 2, -14.8, 2));
+        indexes.add(store.addNode(6, 7, 8, 1, 9.8, 4));
+        indexes.add(store.addNode(6, 10, 11, 4, -1000.01, 1));
+
+        mapper = new SmallNodeStoreMapper();
     }
 
     @Test
     public void testRoundTripWithCopy() {
         mapper.setMode(Mode.COPY);
 
-        PointStoreDouble store2 = mapper.toModel(mapper.toState(store));
+        SmallNodeStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
-        assertEquals(store.getDimensions(), store2.getDimensions());
         assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
 
-        assertNotSame(store.getStore(), store2.getStore());
-        assertNotSame(store.getFreeIndexes(), store2.getFreeIndexes());
+        assertNotSame(store.parentIndex, store2.parentIndex);
+        assertNotSame(store.leftIndex, store2.leftIndex);
+        assertNotSame(store.rightIndex, store2.rightIndex);
+        assertNotSame(store.cutDimension, store2.cutDimension);
+        assertNotSame(store.cutValue, store2.cutValue);
+        assertNotSame(store.mass, store2.mass);
 
         indexes.forEach(i -> {
-            assertArrayEquals(store.get(i), store2.get(i));
+            assertEquals(store.getParent(i), store2.getParent(i));
+            assertEquals(store.getLeftIndex(i), store2.getLeftIndex(i));
+            assertEquals(store.getRightIndex(i), store2.getRightIndex(i));
+            assertEquals(store.getCutDimension(i), store2.getCutDimension(i));
+            assertEquals(store.getCutValue(i), store2.getCutValue(i));
+            assertEquals(store.getMass(i), store2.getMass(i));
         });
     }
 
@@ -75,12 +76,16 @@ public class PointStoreDoubleMapperTest {
     public void testRoundTripWithoutCopy() {
         mapper.setMode(Mode.REFERENCE);
 
-        PointStoreDouble store2 = mapper.toModel(mapper.toState(store));
+        SmallNodeStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
-        assertEquals(store.getDimensions(), store2.getDimensions());
         assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
 
-        assertSame(store.getStore(), store2.getStore());
+        assertSame(store.parentIndex, store2.parentIndex);
+        assertSame(store.leftIndex, store2.leftIndex);
+        assertSame(store.rightIndex, store2.rightIndex);
+        assertSame(store.cutDimension, store2.cutDimension);
+        assertSame(store.cutValue, store2.cutValue);
+        assertSame(store.mass, store2.mass);
     }
 }

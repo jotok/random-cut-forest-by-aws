@@ -19,22 +19,26 @@ import lombok.Data;
 
 @Data
 public class NodeStoreState {
-    public int[] cutDimension;
-    public double[] cutValue;
+    private int capacity;
+    private int freeIndexPointer;
+    private int[] cutDimension;
+    private double[] cutValue;
+
     /*
      * the following are for SmallNodeStore
      */
-    public short[] smallParentIndex;
-    public short[] smallLeftIndex;
-    public short[] smallRightIndex;
-    public short[] smallMass;
-    public short[] smallFreeIndexes;
+    private short[] smallParentIndex;
+    private short[] smallLeftIndex;
+    private short[] smallRightIndex;
+    private short[] smallMass;
+    private short[] smallFreeIndexes;
+
     /*
      * the following are for NodeStore
      */
-    public int[] parentIndex;
-    public int[] leftIndex;
-    public int[] rightIndex;
-    public int[] mass;
-    public int[] freeIndexes;
+    private int[] parentIndex;
+    private int[] leftIndex;
+    private int[] rightIndex;
+    private int[] mass;
+    private int[] freeIndexes;
 }

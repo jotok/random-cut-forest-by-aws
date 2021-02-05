@@ -80,11 +80,16 @@ public class RandomCutForestMapper
     private boolean saveExecutorContext = false;
 
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * The mode used when mapping a {@link RandomCutForest} to a
+     * {@link RandomCutForestState}. The mapper guarantees that a state object
+     * created in a given mode can be converted to a model by a mapper class in the
+     * same mode. Currently supported modes are {@code COPY} and {@code REFERENCE},
+     * and the default mode is {@code COPY}.
+     *
+     * This field is not used when mapping a state object to a model object.
+     * Instead, the mode is read from the state object.
      */
-    private boolean copy = true;
+    private Mode mode = Mode.COPY;
 
     /**
      * Create a {@link RandomCutForestState} object representing the state of the
@@ -108,6 +113,8 @@ public class RandomCutForestMapper
         }
 
         RandomCutForestState state = new RandomCutForestState();
+        state.setVersion(RandomCutForestState.CURRENT_VERSION);
+        state.setMode(mode);
         state.setNumberOfTrees(forest.getNumberOfTrees());
         state.setDimensions(forest.getDimensions());
         state.setLambda(forest.getLambda());
@@ -130,11 +137,13 @@ public class RandomCutForestMapper
             PointStoreCoordinator pointStoreCoordinator = (PointStoreCoordinator) forest.getUpdateCoordinator();
             PointStoreState pointStoreState;
             if (forest.getPrecision() == Precision.SINGLE) {
-                pointStoreState = new PointStoreFloatMapper()
-                        .toState((PointStoreFloat) pointStoreCoordinator.getStore());
+                PointStoreFloatMapper pointStoreFloatMapper = new PointStoreFloatMapper();
+                pointStoreFloatMapper.setMode(mode);
+                pointStoreState = pointStoreFloatMapper.toState((PointStoreFloat) pointStoreCoordinator.getStore());
             } else {
-                pointStoreState = new PointStoreDoubleMapper()
-                        .toState((PointStoreDouble) pointStoreCoordinator.getStore());
+                PointStoreDoubleMapper pointStoreDoubleMapper = new PointStoreDoubleMapper();
+                pointStoreDoubleMapper.setMode(mode);
+                pointStoreState = pointStoreDoubleMapper.toState((PointStoreDouble) pointStoreCoordinator.getStore());
             }
             state.setPointStoreState(pointStoreState);
 
@@ -145,6 +154,7 @@ public class RandomCutForestMapper
             }
 
             CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
+            samplerMapper.setMode(mode);
 
             for (IComponentModel<?> component : forest.getComponents()) {
                 SamplerPlusTree<Integer> samplerPlusTree = (SamplerPlusTree<Integer>) component;
@@ -160,11 +170,13 @@ public class RandomCutForestMapper
             if (trees != null) {
                 if (forest.getPrecision() == Precision.SINGLE) {
                     CompactRandomCutTreeFloatMapper treeMapper = new CompactRandomCutTreeFloatMapper();
+                    treeMapper.setMode(mode);
                     List<CompactRandomCutTreeState> treeStates = trees.stream()
                             .map(t -> treeMapper.toState((CompactRandomCutTreeFloat) t)).collect(Collectors.toList());
                     state.setCompactRandomCutTreeStates(treeStates);
                 } else {
                     CompactRandomCutTreeDoubleMapper treeMapper = new CompactRandomCutTreeDoubleMapper();
+                    treeMapper.setMode(mode);
                     List<CompactRandomCutTreeState> treeStates = trees.stream()
                             .map(t -> treeMapper.toState((CompactRandomCutTreeDouble) t)).collect(Collectors.toList());
                     state.setCompactRandomCutTreeStates(treeStates);
@@ -231,16 +243,21 @@ public class RandomCutForestMapper
         List<CompactRandomCutTreeState> treeStates = state.getCompactRandomCutTreeStates();
         List<CompactSamplerState> samplerStates = state.getCompactSamplerStates();
         CompactSamplerMapper samplerMapper = new CompactSamplerMapper();
+        samplerMapper.setMode(state.getMode());
 
         if (state.isCompactEnabled()) {
             PointStoreState pointStoreState = state.getPointStoreState();
             Precision precision;
             IPointStore<?> pointStore;
             if (pointStoreState.getFloatData() != null) {
-                pointStore = new PointStoreFloatMapper().toModel(pointStoreState);
+                PointStoreFloatMapper pointStoreFloatMapper = new PointStoreFloatMapper();
+                pointStoreFloatMapper.setMode(state.getMode());
+                pointStore = pointStoreFloatMapper.toModel(pointStoreState);
                 precision = Precision.SINGLE;
             } else {
-                pointStore = new PointStoreDoubleMapper().toModel(pointStoreState);
+                PointStoreDoubleMapper pointStoreDoubleMapper = new PointStoreDoubleMapper();
+                pointStoreDoubleMapper.setMode(state.getMode());
+                pointStore = pointStoreDoubleMapper.toModel(pointStoreState);
                 precision = Precision.DOUBLE;
             }
             builder.precision(precision);
@@ -253,10 +270,12 @@ public class RandomCutForestMapper
             if (precision == Precision.SINGLE) {
                 CompactRandomCutTreeFloatMapper m = new CompactRandomCutTreeFloatMapper();
                 m.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
+                m.setMode(state.getMode());
                 treeMapper = m;
             } else {
                 CompactRandomCutTreeDoubleMapper m = new CompactRandomCutTreeDoubleMapper();
                 m.setBoundingBoxCacheEnabled(state.isBoundingBoxCachingEnabled());
+                m.setMode(state.getMode());
                 treeMapper = m;
             }
 
@@ -289,7 +308,9 @@ public class RandomCutForestMapper
 
             return new RandomCutForest(builder, coordinator, components, rng);
         } else {
-            PointStoreDouble pointStore = new PointStoreDoubleMapper().toModel(state.getPointStoreState());
+            PointStoreDoubleMapper pointStoreDoubleMapper = new PointStoreDoubleMapper();
+            pointStoreDoubleMapper.setMode(state.getMode());
+            PointStoreDouble pointStore = pointStoreDoubleMapper.toModel(state.getPointStoreState());
             PassThroughCoordinator coordinator = new PassThroughCoordinator();
             coordinator.setTotalUpdates(state.getTotalUpdates());
             ComponentList<double[]> components = new ComponentList<>();

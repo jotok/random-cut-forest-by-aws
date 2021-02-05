@@ -23,30 +23,45 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.Mode;
 import com.amazon.randomcutforest.store.PointStoreFloat;
 
 @Getter
 @Setter
 public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, PointStoreState> {
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * The mode used when mapping between model and state objects. The mapper
+     * guarantees that a state object created in a given mode can be converted to a
+     * model by a mapper class in the same mode. Currently supported modes are
+     * {@code COPY} and {@code REFERENCE}, and the default mode is {@code COPY}.
      */
-    private boolean copy = true;
+    private Mode mode = Mode.COPY;
 
     @Override
     public PointStoreFloat toModel(PointStoreState state, long seed) {
         checkNotNull(state.getRefCount(), "refCount must not be null");
         checkNotNull(state.getFloatData(), "floatdata must not be null");
 
-        int capacity = state.getRefCount().length;
-        short[] refCount = Arrays.copyOf(state.getRefCount(), capacity);
-        float[] store = Arrays.copyOf(state.getFloatData(), state.getFloatData().length);
+        int capacity = state.getCapacity();
+        int freeIndexPointer = state.getFreeIndexPointer();
 
-        int freeIndexPointer = state.getFreeIndexes().length - 1;
-        int[] freeIndexes = new int[capacity];
-        System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        short[] refCount;
+        float[] store;
+        int[] freeIndexes;
+
+        if (mode == Mode.COPY) {
+            refCount = new short[capacity];
+            store = new float[capacity * state.getDimensions()];
+            freeIndexes = new int[capacity];
+
+            System.arraycopy(state.getRefCount(), 0, refCount, 0, state.getRefCount().length);
+            System.arraycopy(state.getFloatData(), 0, store, 0, state.getFloatData().length);
+            System.arraycopy(state.getFreeIndexes(), 0, freeIndexes, 0, state.getFreeIndexes().length);
+        } else {
+            refCount = state.getRefCount();
+            store = state.getFloatData();
+            freeIndexes = state.getFreeIndexes();
+        }
 
         return new PointStoreFloat(store, refCount, freeIndexes, freeIndexPointer);
     }
@@ -54,9 +69,20 @@ public class PointStoreFloatMapper implements IStateMapper<PointStoreFloat, Poin
     @Override
     public PointStoreState toState(PointStoreFloat model) {
         PointStoreState state = new PointStoreState();
-        state.setFloatData(Arrays.copyOf(model.getStore(), model.getStore().length));
-        state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
-        state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setCapacity(model.getCapacity());
+        state.setDimensions(model.getDimensions());
+        state.setFreeIndexPointer(model.getFreeIndexPointer());
+
+        if (mode == Mode.COPY) {
+            state.setFloatData(Arrays.copyOf(model.getStore(), model.getStore().length));
+            state.setRefCount(Arrays.copyOf(model.getRefCount(), model.getRefCount().length));
+            state.setFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        } else {
+            state.setFloatData(model.getStore());
+            state.setRefCount(model.getRefCount());
+            state.setFreeIndexes(model.getFreeIndexes());
+        }
+
         return state;
     }
 }

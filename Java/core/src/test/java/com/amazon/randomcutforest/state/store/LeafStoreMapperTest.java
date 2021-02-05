@@ -16,38 +16,68 @@
 package com.amazon.randomcutforest.state.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
-import java.util.stream.IntStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazon.randomcutforest.store.SmallLeafStore;
+import com.amazon.randomcutforest.state.Mode;
+import com.amazon.randomcutforest.store.LeafStore;
 
 public class LeafStoreMapperTest {
-    private SmallLeafStoreMapper mapper;
+    private LeafStore store;
+    private List<Integer> indexes;
+
+    private LeafStoreMapper mapper;
 
     @BeforeEach
     public void setUp() {
-        mapper = new SmallLeafStoreMapper();
+        indexes = new ArrayList<>();
+
+        store = new LeafStore(10);
+        indexes.add(store.addLeaf(1, 2, 1));
+        indexes.add(store.addLeaf(1, 3, 2));
+        indexes.add(store.addLeaf(4, 5, 1));
+        indexes.add(store.addLeaf(4, 6, 3));
+
+        mapper = new LeafStoreMapper();
     }
 
     @Test
-    public void testRoundTrip() {
-        SmallLeafStore store = new SmallLeafStore((short) 10);
-        int index1 = store.addLeaf(1, 2, 1);
-        int index2 = store.addLeaf(1, 3, 2);
-        int index3 = store.addLeaf(4, 5, 1);
-        int index4 = store.addLeaf(4, 6, 3);
-
-        SmallLeafStore store2 = mapper.toModel(mapper.toState(store));
+    public void testRoundTripWithCopy() {
+        LeafStore store2 = mapper.toModel(mapper.toState(store));
         assertEquals(store.getCapacity(), store2.getCapacity());
         assertEquals(store.size(), store2.size());
+        assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
 
-        IntStream.of(index1, index2, index3, index4).forEach(i -> {
-            assertEquals(store.getParent(i), store2.getParent(i));
-            assertEquals(store.getPointIndex(i), store2.getPointIndex(i));
-            assertEquals(store.getMass(i), store2.getMass(i));
+        assertNotSame(store.pointIndex, store2.pointIndex);
+        assertNotSame(store.parentIndex, store2.parentIndex);
+        assertNotSame(store.mass, store2.mass);
+        assertNotSame(store.getFreeIndexes(), store2.getFreeIndexes());
+
+        indexes.forEach(i -> {
+            assertEquals(store.getParent(i), store2.getParent(i), "different parent at index " + i);
+            assertEquals(store.getPointIndex(i), store2.getPointIndex(i), "different point at index " + i);
+            assertEquals(store.getMass(i), store2.getMass(i), "different mass at index " + i);
         });
+    }
+
+    @Test
+    public void testRoundTripWithoutCopy() {
+        mapper.setMode(Mode.REFERENCE);
+
+        LeafStore store2 = mapper.toModel(mapper.toState(store));
+        assertEquals(store.getCapacity(), store2.getCapacity());
+        assertEquals(store.size(), store2.size());
+        assertEquals(store.getFreeIndexPointer(), store2.getFreeIndexPointer());
+
+        assertSame(store.pointIndex, store2.pointIndex);
+        assertSame(store.parentIndex, store2.parentIndex);
+        assertSame(store.mass, store2.mass);
+        assertSame(store.getFreeIndexes(), store2.getFreeIndexes());
     }
 }

@@ -19,6 +19,7 @@ import com.amazon.randomcutforest.RandomCutForest;
 import com.amazon.randomcutforest.config.Precision;
 import com.amazon.randomcutforest.examples.Example;
 import com.amazon.randomcutforest.sampler.CompactSampler;
+import com.amazon.randomcutforest.state.Mode;
 import com.amazon.randomcutforest.state.RandomCutForestMapper;
 import com.amazon.randomcutforest.state.RandomCutForestState;
 import com.amazon.randomcutforest.testutils.NormalMixtureTestData;
@@ -69,7 +70,7 @@ public class ProtostuffExampleWithDynamicLambda implements Example {
 
         RandomCutForestMapper mapper = new RandomCutForestMapper();
         mapper.setSaveExecutorContext(true);
-        mapper.setCopy(true);
+        mapper.setMode(Mode.COPY);
 
         Schema<RandomCutForestState> schema = RuntimeSchema.getSchema(RandomCutForestState.class);
         LinkedBuffer buffer = LinkedBuffer.allocate(512);

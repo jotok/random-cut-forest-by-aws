@@ -21,28 +21,46 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.amazon.randomcutforest.state.IStateMapper;
+import com.amazon.randomcutforest.state.Mode;
 import com.amazon.randomcutforest.store.SmallLeafStore;
 
 @Getter
 @Setter
 public class SmallLeafStoreMapper implements IStateMapper<SmallLeafStore, LeafStoreState> {
     /**
-     * If true, then model data will be copied (i.e., the state class will not share
-     * any data with the model). If false, some model data may be shared with the
-     * state class. Copying is enabled by default.
+     * The mode used when mapping between model and state objects. The mapper
+     * guarantees that a state object created in a given mode can be converted to a
+     * model by a mapper class in the same mode. Currently supported modes are
+     * {@code COPY} and {@code REFERENCE}, and the default mode is {@code COPY}.
      */
-    private boolean copy = true;
+    private Mode mode = Mode.COPY;
 
     @Override
     public SmallLeafStore toModel(LeafStoreState state, long seed) {
         int capacity = state.getPointIndex().length;
-        int[] pointIndex = Arrays.copyOf(state.getPointIndex(), capacity);
-        short[] parentIndex = Arrays.copyOf(state.getSmallParentIndex(), capacity);
-        short[] mass = Arrays.copyOf(state.getSmallMass(), capacity);
+        short freeIndexPointer = (short) state.getFreeIndexPointer();
 
-        short freeIndexPointer = (short) (state.getSmallFreeIndexes().length - 1);
-        short[] freeIndexes = new short[capacity];
-        System.arraycopy(state.getSmallFreeIndexes(), 0, freeIndexes, 0, state.getSmallFreeIndexes().length);
+        int[] pointIndex;
+        short[] parentIndex;
+        short[] mass;
+        short[] freeIndexes;
+
+        if (mode == Mode.COPY) {
+            pointIndex = new int[capacity];
+            parentIndex = new short[capacity];
+            mass = new short[capacity];
+            freeIndexes = new short[capacity];
+
+            System.arraycopy(state.getPointIndex(), 0, pointIndex, 0, state.getPointIndex().length);
+            System.arraycopy(state.getSmallParentIndex(), 0, parentIndex, 0, state.getSmallParentIndex().length);
+            System.arraycopy(state.getSmallMass(), 0, mass, 0, state.getSmallMass().length);
+            System.arraycopy(state.getSmallFreeIndexes(), 0, freeIndexes, 0, freeIndexPointer + 1);
+        } else {
+            pointIndex = state.getPointIndex();
+            parentIndex = state.getSmallParentIndex();
+            mass = state.getSmallMass();
+            freeIndexes = state.getSmallFreeIndexes();
+        }
 
         return new SmallLeafStore(pointIndex, parentIndex, mass, freeIndexes, freeIndexPointer);
     }
@@ -50,10 +68,21 @@ public class SmallLeafStoreMapper implements IStateMapper<SmallLeafStore, LeafSt
     @Override
     public LeafStoreState toState(SmallLeafStore model) {
         LeafStoreState state = new LeafStoreState();
-        state.setPointIndex(Arrays.copyOf(model.pointIndex, model.pointIndex.length));
-        state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
-        state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
-        state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        state.setCapacity(model.getCapacity());
+        state.setFreeIndexPointer(model.getFreeIndexPointer());
+
+        if (mode == Mode.COPY) {
+            state.setPointIndex(Arrays.copyOf(model.pointIndex, model.pointIndex.length));
+            state.setSmallParentIndex(Arrays.copyOf(model.parentIndex, model.parentIndex.length));
+            state.setSmallMass(Arrays.copyOf(model.mass, model.mass.length));
+            state.setSmallFreeIndexes(Arrays.copyOf(model.getFreeIndexes(), model.getFreeIndexPointer() + 1));
+        } else {
+            state.setPointIndex(model.pointIndex);
+            state.setSmallParentIndex(model.parentIndex);
+            state.setSmallMass(model.mass);
+            state.setSmallFreeIndexes(model.getFreeIndexes());
+        }
+
         return state;
     }
 
